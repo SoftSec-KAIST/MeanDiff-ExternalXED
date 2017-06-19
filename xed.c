@@ -11,7 +11,14 @@ enum Arch
 {
     X86,
     X64,
-    DEFAULT,
+    DEFAULTARCH,
+};
+
+enum Mode
+{
+    GETTYPE,
+    CHECKINSN,
+    DEFAULTMODE,
 };
 
 struct CmdOpt
@@ -19,6 +26,7 @@ struct CmdOpt
     char *insn;
     size_t size;
     enum Arch arch;
+    enum Mode mode;
 };
 
 enum Type
@@ -71,11 +79,12 @@ struct CmdOpt *parse(int argc, char **argv)
 
     option->insn = NULL;
     option->size = 0;
-    option->arch = DEFAULT;
+    option->arch = DEFAULTARCH;
+    option->mode = DEFAULTMODE;
 
     while (1)
     {
-        opt = getopt(argc, argv, "i:s:a:");
+        opt = getopt(argc, argv, "i:s:a:m:");
         if (opt == -1) break;
 
         switch (opt)
@@ -115,7 +124,7 @@ struct CmdOpt *parse(int argc, char **argv)
                 }
                 break;
             case 'a':
-                if (option->arch != DEFAULT)
+                if (option->arch != DEFAULTARCH)
                 {
                     help(argv[0]);
                     free(option->insn);
@@ -129,6 +138,30 @@ struct CmdOpt *parse(int argc, char **argv)
                 else if (!strcmp(optarg, "x64"))
                 {
                     option->arch = X64;
+                }
+                else
+                {
+                    help(argv[0]);
+                    free(option->insn);
+                    free(option);
+                    exit(-1);
+                }
+                break;
+            case 'm':
+                if (option->mode != DEFAULTMODE)
+                {
+                    help(argv[0]);
+                    free(option->insn);
+                    free(option);
+                    exit(-1);
+                }
+                if (!strcmp(optarg, "gettype"))
+                {
+                    option->mode = GETTYPE;
+                }
+                else if (!strcmp(optarg, "checkinsn"))
+                {
+                    option->mode = CHECKINSN;
                 }
                 else
                 {
@@ -282,18 +315,50 @@ void get_type(struct CmdOpt *option, enum Type *t)
     return;
 }
 
+void check_insn(struct CmdOpt *option, bool *result)
+{
+    xed_uint8_t insn[XED_MAX_INSTRUCTION_BYTES] = {0, };
+    xed_decoded_inst_t xedd;
+    xed_uint_t size = (xed_uint_t) option->size;
+
+    xed_tables_init();
+
+    if (get_bytes(option->insn, (xed_uint_t) option->size, insn) < 0) return;
+
+    if (!chk_valid(option->arch, &xedd, insn, size)) return;
+
+    if (xedd._decoded_length == size)
+    {
+        *result = true;
+    }
+
+    return;
+}
+
 int main(int argc, char **argv)
 {
     struct CmdOpt *option = parse(argc, argv);
     enum Type t = BAD;
+    bool result = false;
 
-    if (option->insn == NULL || option->size == 0 || option->arch == DEFAULT)
+    if (option->insn == NULL || option->size == 0 ||
+            option->arch == DEFAULTARCH || option->mode == DEFAULTMODE)
     {
         help(argv[0]);
+
         return -1;
     }
 
-    get_type(option, &t);
+    if (option->mode == GETTYPE)
+    {
+        get_type(option, &t);
 
-    return t;
+        return t;
+    }
+    else
+    {
+        check_insn(option, &result);
+
+        return result;
+    }
 }
