@@ -36,7 +36,7 @@ enum Type
 
 void help(char *progName)
 {
-    printf("[Usage] %s [Options...]", progName);
+    printf("[Usage] %s [Options...]\n", progName);
 }
 
 bool sanitize(char *insn)
@@ -62,6 +62,13 @@ struct CmdOpt *parse(int argc, char **argv)
     struct CmdOpt *option = calloc(1, sizeof(struct CmdOpt));
     int opt;
 
+    if (argc < 2)
+    {
+        help(argv[0]);
+        free(option);
+        exit(-1);
+    }
+
     option->insn = NULL;
     option->size = 0;
     option->arch = DEFAULT;
@@ -76,6 +83,7 @@ struct CmdOpt *parse(int argc, char **argv)
             case 'i':
                 if (option->insn != NULL)
                 {
+                    help(argv[0]);
                     free(option->insn);
                     free(option);
                     exit(-1);
@@ -83,6 +91,7 @@ struct CmdOpt *parse(int argc, char **argv)
                 option->insn = strdup(optarg);
                 if (!sanitize(option->insn))
                 {
+                    help(argv[0]);
                     free(option->insn);
                     free(option);
                     exit(-1);
@@ -91,6 +100,7 @@ struct CmdOpt *parse(int argc, char **argv)
             case 's':
                 if (option->size != 0)
                 {
+                    help(argv[0]);
                     free(option->insn);
                     free(option);
                     exit(-1);
@@ -98,6 +108,7 @@ struct CmdOpt *parse(int argc, char **argv)
                 option->size = atoi(optarg);
                 if (option->size == 0)
                 {
+                    help(argv[0]);
                     free(option->insn);
                     free(option);
                     exit(-1);
@@ -106,6 +117,7 @@ struct CmdOpt *parse(int argc, char **argv)
             case 'a':
                 if (option->arch != DEFAULT)
                 {
+                    help(argv[0]);
                     free(option->insn);
                     free(option);
                     exit(-1);
@@ -120,6 +132,7 @@ struct CmdOpt *parse(int argc, char **argv)
                 }
                 else
                 {
+                    help(argv[0]);
                     free(option->insn);
                     free(option);
                     exit(-1);
@@ -275,6 +288,12 @@ int main(int argc, char **argv)
 {
     struct CmdOpt *option = parse(argc, argv);
     enum Type t = BAD;
+
+    if (option->insn == NULL || option->size == 0 || option->arch == DEFAULT)
+    {
+        help(argv[0]);
+        return -1;
+    }
 
     get_type(option, &t);
 
