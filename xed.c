@@ -21,6 +21,11 @@ struct CmdOpt
     enum Arch arch;
 };
 
+enum Type
+{
+    BAD,
+};
+
 void help(char *progName)
 {
     printf("[Usage] %s [Options...]", progName);
@@ -30,10 +35,7 @@ bool sanitize(char *insn)
 {
     int i;
 
-    if (strlen(insn) % 2 != 0)
-    {
-        return false;
-    }
+    if (strlen(insn) % 2 != 0) return false;
 
     for (i = 0; i < strlen(insn); i++)
     {
@@ -126,9 +128,84 @@ struct CmdOpt *parse(int argc, char **argv)
     return option;
 }
 
+int get_bytes(char *arg, xed_uint_t size, xed_uint8_t *insn)
+{
+    xed_uint_t i;
+    xed_uint_t len = (xed_uint_t) strlen(arg) / 2;
+    char *ptr;
+
+    if (size != len) return -1;
+
+    for (i = 0; i < len; i++)
+    {
+        sscanf(ptr, "%2hhx", &insn[i]);
+        ptr += 2;
+    }
+
+    return 0;
+}
+
+bool chk_valid(enum Arch arch, xed_decoded_inst_t *xedd, xed_uint8_t *insn,
+        xed_uint_t size)
+{
+    xed_machine_mode_enum_t mmode;
+    xed_address_width_enum_t stack_addr_width;
+    xed_error_enum_t xed_error;
+
+    if (arch == X86)
+    {
+        mmode = XED_MACHINE_MODE_LEGACY_32;
+        stack_addr_width = XED_ADDRESS_WIDTH_32b;
+    }
+    else
+    {
+        mmode = XED_MACHINE_MODE_LONG_64;
+        stack_addr_width = XED_ADDRESS_WIDTH_64b;
+    }
+
+    xed_decoded_inst_zero(xedd);
+    xed_decoded_inst_set_mode(xedd, mmode, stack_addr_width);
+    xed_error = xed_decode(xedd, insn, size);
+
+    return xed_error == XED_ERROR_NONE;
+}
+
+void get_type(struct CmdOpt *option, enum Type *t)
+{
+    xed_uint8_t insn[XED_MAX_INSTRUCTION_BYTES] = {0, };
+    xed_decoded_inst_t xedd;
+    xed_uint_t size = (xed_uint_t) option->size;
+    xed_uint_t i;
+    bool valid = false;
+
+    xed_tables_init();
+
+    if (get_bytes(option->insn, (xed_uint_t) option->size, insn) < 0) return;
+
+    for (i = 0; i < XED_MAX_INSTRUCTION_BYTES - size; i++)
+    {
+        if (chk_valid(option->arch, &xedd, insn, size + i))
+        {
+            size = size + i;
+            valid = true;
+            break;
+        }
+    }
+
+    if (valid)
+    {
+
+    }
+
+    return;
+}
+
 int main(int argc, char **argv)
 {
     struct CmdOpt *option = parse(argc, argv);
+    enum Type t = BAD;
 
-    return 0;
+    get_type(option, &t);
+
+    return t;
 }
