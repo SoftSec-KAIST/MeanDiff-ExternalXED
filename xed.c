@@ -23,6 +23,14 @@ struct CmdOpt
 
 enum Type
 {
+    OPCODE_ONLY,
+    MODRM,
+    IMM8,
+    IMM32,
+    IMM64,
+    MODRM_IMM8,
+    MODRM_IMM32,
+    MODRM_IMM64,
     BAD,
 };
 
@@ -178,6 +186,10 @@ void get_type(struct CmdOpt *option, enum Type *t)
     xed_uint_t i;
     bool valid = false;
 
+    const xed_operand_values_t *ov;
+    xed_uint32_t imm_width;
+    bool has_modrm;
+
     xed_tables_init();
 
     if (get_bytes(option->insn, (xed_uint_t) option->size, insn) < 0) return;
@@ -194,7 +206,66 @@ void get_type(struct CmdOpt *option, enum Type *t)
 
     if (valid)
     {
+        ov = xed_decoded_inst_operands_const(&xedd);
 
+        if (xed_operand_values_has_modrm_byte(ov))
+        {
+            has_modrm = true;
+        }
+        else
+        {
+            has_modrm = false;
+        }
+
+        imm_width = 0;
+        if (xed_operand_values_has_immediate(ov))
+        {
+            imm_width = xed_decoded_inst_get_immediate_width_bits(&xedd);
+        }
+        else if (xed_operand_values_has_displacement(ov))
+        {
+            imm_width =
+                xed_decoded_inst_get_branch_displacement_width_bits(&xedd);
+        }
+
+        if (!has_modrm && imm_width == 0)
+        {
+            *t = OPCODE_ONLY;
+        }
+        else if (has_modrm && imm_width == 0)
+        {
+            *t = MODRM;
+        }
+        else if (!has_modrm && imm_width > 0)
+        {
+            switch (imm_width)
+            {
+                case 8:
+                    *t = IMM8;
+                    break;
+                case 32:
+                    *t = IMM32;
+                    break;
+                case 64:
+                    *t = IMM64;
+                    break;
+            }
+        }
+        else
+        {
+            switch (imm_width)
+            {
+                case 8:
+                    *t = MODRM_IMM8;
+                    break;
+                case 32:
+                    *t = MODRM_IMM32;
+                    break;
+                case 64:
+                    *t = MODRM_IMM64;
+                    break;
+            }
+        }
     }
 
     return;
