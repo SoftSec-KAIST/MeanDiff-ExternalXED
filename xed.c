@@ -157,6 +157,7 @@ int get_bytes(char *arg, xed_uint_t size, xed_uint8_t *insn)
 
     if (size != len) return -1;
 
+    ptr = arg;
     for (i = 0; i < len; i++)
     {
         sscanf(ptr, "%2hhx", &insn[i]);
@@ -199,7 +200,6 @@ void get_type(struct CmdOpt *option, enum Type *t)
     xed_uint_t i;
     bool valid = false;
 
-    const xed_operand_values_t *ov;
     xed_uint32_t imm_width;
     bool has_modrm;
 
@@ -219,9 +219,7 @@ void get_type(struct CmdOpt *option, enum Type *t)
 
     if (valid)
     {
-        ov = xed_decoded_inst_operands_const(&xedd);
-
-        if (xed_operand_values_has_modrm_byte(ov))
+        if (xed_operand_values_has_modrm_byte(&xedd))
         {
             has_modrm = true;
         }
@@ -231,11 +229,11 @@ void get_type(struct CmdOpt *option, enum Type *t)
         }
 
         imm_width = 0;
-        if (xed_operand_values_has_immediate(ov))
+        if (xed_operand_values_has_immediate(&xedd))
         {
             imm_width = xed_decoded_inst_get_immediate_width_bits(&xedd);
         }
-        else if (xed_operand_values_has_displacement(ov))
+        else if (xed_operand_values_has_displacement(&xedd))
         {
             imm_width =
                 xed_decoded_inst_get_branch_displacement_width_bits(&xedd);
