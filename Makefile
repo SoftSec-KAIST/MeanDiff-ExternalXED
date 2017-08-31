@@ -1,9 +1,15 @@
-all: xed
+BUILDDIR = build
+TARGET = $(BUILDDIR)/xed
 
-xed: xed.c
-	$(CC) -Wall -I./include -L./lib -o $@ $< -lxed
+all: $(TARGET)
+
+$(BUILDDIR):
+	mkdir -p $@
+
+$(TARGET): xed.c $(BUILDDIR)
+	$(CC) -Wall -o $@ $< -lxed
 
 clean:
-	rm -f xed
+	rm -rf $(BUILDDIR)
 
 .PHONY: all clean
