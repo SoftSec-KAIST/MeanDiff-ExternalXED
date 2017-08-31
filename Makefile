@@ -1,5 +1,5 @@
 BUILDDIR = build
-TARGET = $(BUILDDIR)/xed
+TARGET = $(BUILDDIR)/ExternalXED
 
 all: $(TARGET)
 
